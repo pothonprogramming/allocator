@@ -13,8 +13,8 @@ const Allocator = (() => {
     headerLength:0,
   }
 
-  const BUFFER_LENGTH = 1000
-  const buffer = new Uint32Array(BUFFER_LENGTH)
+  const BUFFER_LENGTH = 1000;
+  const buffer = new Uint32Array(BUFFER_LENGTH);
 
   // * Even if a buffer is "self-describing", the application it is loaded into still needs to know how to read it.
   // There will always have to be some hard coded mechanism that allows you to interpret the data in the buffer.
@@ -25,7 +25,7 @@ const Allocator = (() => {
 
   return {
     initialize() {
-      
+      console.log("allocator initialized");
     }
   }
 })()
