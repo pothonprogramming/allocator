@@ -1,6 +1,12 @@
-// all browser specific code should go here
+/////////////////////////////
+// ABOUT BROWSER INTERFACE //
+/////////////////////////////
+// * All browser specific code should go here.
+// This is essentially the "glue" layer that connects the more generic application code to the browser platform.
 (() => {
-  console.log("hello")
+  const OUTPUT = document.getElementById("output");
+
+  OUTPUT.innerText = "Hello";
 
   Allocator.initialize()
 })()
