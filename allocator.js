@@ -13,7 +13,7 @@ const Allocator = (() => {
   const buffer = new ArrayBuffer(BYTE_LENGTH); // In C I would probably work with a uint32 array to ensure alignment.
 
   const metadata = new Uint32Array(buffer, 0, 2);
-  const float32Data = new Float32Array(buffer, 4*2);
+  const float32Data = new Float32Array(buffer, 4*2, 10);
 
   // * Even if a buffer is "self-describing", the application it is loaded into still needs to know how to read it.
   // There will always have to be some hard coded mechanism that allows you to interpret the data in the buffer.
