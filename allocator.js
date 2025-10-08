@@ -29,6 +29,8 @@ const Allocator = (() => {
   float32Data[1] = 2.2;
   float32Data[2] = 3.3;
 
+  // What range and type should my data be in? That's what the metadata should describe.
+
 
   return {
     initialize() {
