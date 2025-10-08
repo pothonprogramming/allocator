@@ -9,23 +9,32 @@
 // This application is intended to showcase the Buffer utility.
 const Allocator = (() => {
 
-  const HEADER_INDICES = {
-    headerLength:0,
-  }
+  const BYTE_LENGTH = 1000;
+  const buffer = new ArrayBuffer(BYTE_LENGTH); // In C I would probably work with a uint32 array to ensure alignment.
 
-  const BUFFER_LENGTH = 1000;
-  const buffer = new Uint32Array(BUFFER_LENGTH);
+  const metadata = new Uint32Array(buffer, 0, 2);
+  const float32Data = new Float32Array(buffer, 4*2);
 
   // * Even if a buffer is "self-describing", the application it is loaded into still needs to know how to read it.
   // There will always have to be some hard coded mechanism that allows you to interpret the data in the buffer.
- 
-  // A header can be used to describe the rest of the application's metadata.
-  buffer[HEADER_INDICES.headerLength] = 1;
+
+  // Start with the easiest thing first. Track a range of numbers.
+
+  // metadata = startIndex, endIndex
+  // data = 10 numbers
+
+  metadata[0] = 2;
+  metadata[1] = 10 - 2;
+  float32Data[0] = 1.1;
+  float32Data[1] = 2.2;
+  float32Data[2] = 3.3;
 
 
   return {
     initialize() {
       console.log("allocator initialized");
+      console.log(metadata);
+      console.log(float32Data);
     }
   }
 })()
