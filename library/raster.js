@@ -1,6 +1,10 @@
 // Handy Rasterization methods:
 // Color values are expected to be stored as AABBGGRR.
 
+function Raster8_setValue2D(buffer, offset, stride, x, y, value) {
+    buffer[offset + y * stride + x] = value;
+};
+
 const Raster = {
     fillCircle(pixels, raster_width, circle_x, circle_y, circle_radius, color) {
         const box_bottom = PureMath.ceiling(circle_y + circle_radius);

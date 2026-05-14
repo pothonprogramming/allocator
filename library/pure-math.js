@@ -1,8 +1,9 @@
 // Some basic Math methods
 
+const PureMath_inverseU32 = 0.00000000023283064365386962890625; // 1 / 4294967296 // This probably is too long
+const PureMath_Pi = 3.14159265358979323846;
+
 const PureMath = {
-    inverseU32: 0.00000000023283064365386962890625, // 1 / 4294967296 // This probably is too long
-    Pi: 3.14159265358979323846,
 
     approximateSquareRoot(value) {
 

@@ -1,3 +1,43 @@
+////////////////
+// ABOUT VIEW //
+////////////////
+// This utility allows you to easily create typed views into a contiguous block of memory.
+
+// Reserves an aligned byte offset for a view and advances the cursor accordingly.
+const View_reserve = (cursor, bytes, length) => {
+    const byteOffset = cursor.byteOffset = (cursor.byteOffset + bytes - 1) & ~(bytes - 1);
+    cursor.byteOffset += bytes * length;
+    return byteOffset;
+};
+
+///////////////////////
+// Set Value Methods //
+///////////////////////
+
+// Not sure if I should provide helpers to set values in 2d or 3d views
+
+///////////////////////////
+// View Creation Methods //
+///////////////////////////
+
+// The cursor tracks the byte offset of the latest view you create.
+const View_createCursor = (buffer, byteOffset) => ({ buffer, byteOffset });
+
+// Create specific typed views.
+
+const View_createF32 = (cursor, length) => {
+    return new Float32Array(cursor.buffer, View_reserve(cursor, 4, length), length);
+};
+
+const View_createU32 = (cursor, length) => {
+    return new Uint32Array(cursor.buffer, View_reserve(cursor, 4, length), length);
+};
+
+const View_createU8 = (cursor, length) => {
+    return new Uint32Array(cursor.buffer, View_reserve(cursor, 1, length), length);
+};
+
+/*
 //////////////////
 // ABOUT BUFFER //
 //////////////////
@@ -47,3 +87,4 @@ const Buffer = {
         u32View[index + 1] = value2;
     }
 };
+*/

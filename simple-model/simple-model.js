@@ -5,17 +5,36 @@
 // It is tightly coupled with application logic, inflexible, yet efficient.
 
 const SimpleModel = (() => {
-
     ///////////////
     // Variables //
     ///////////////
 
-    const buffer = new ArrayBuffer(120000);
+    const BACKGROUND_COLOR = 0x00000000;
 
     const DISPLAY_WIDTH = 256;
     const DISPLAY_HEIGHT = 256;
     const DISPLAY_PIXEL_COUNT = DISPLAY_WIDTH * DISPLAY_HEIGHT;
     const DISPLAY_PIXELS = new Uint32Array(DISPLAY_PIXEL_COUNT);
+
+    // Buffers
+    const GLYPH_BUFFER = new ArrayBuffer(1000);
+    const STATE_BUFFER = new ArrayBuffer(20004);
+
+    // Cursors used to build views
+    const GLYPH_CURSOR = View_createCursor(GLYPH_BUFFER, 0);
+    const STATE_CURSOR = View_createCursor(STATE_BUFFER, 0); // Cursor used to build views
+
+    // Views and related data
+    const GLYPHS = [
+        View_createU8(GLYPH_CURSOR, 4 * 6), // a
+        View_createU8(GLYPH_CURSOR, 4 * 6), // b
+    ];
+
+    const PARTICLE_LIMIT = 1000;
+    const PARTICLE_COUNT = View_createU32(STATE_CURSOR, 1);
+    const PARTICLE_POSITIONS = View_createF32(STATE_CURSOR, 2 * PARTICLE_LIMIT);
+    const PARTICLE_VECTORS = View_createF32(STATE_CURSOR, 2 * PARTICLE_LIMIT);
+    const PARTICLE_COLORS = View_createU32(STATE_CURSOR, PARTICLE_LIMIT);
 
     const mouse = Mouse.create(0, 0);
 
@@ -29,33 +48,70 @@ const SimpleModel = (() => {
     let circleX = PureMath.floor(DISPLAY_WIDTH * 0.5);
     let circleY = PureMath.floor(DISPLAY_HEIGHT * 0.75);
 
-    let particlePool;
-    console.log(PureMath.approximateSquareRoot(16));
-
     ////////////////////////
     // Internal Functions //
     ////////////////////////
 
-    function consume(positions, colors, length) {
+    function Particles_collideInnerRectangle(positions, vectors, count, rectangle_left, rectangle_top, rectangle_right, rectangle_bottom) {
+        const length2 = count * 2;
+        for (let xIndex = 0, yIndex = 1; xIndex < length2; xIndex += 2, yIndex += 2) {
+            if (positions[xIndex] < rectangle_left) {
+                positions[xIndex] = rectangle_left;
+                vectors[xIndex] *= -1;
+            } else if (positions[xIndex] >= rectangle_right) {
+                positions[xIndex] = rectangle_right - 1;
+                vectors[xIndex] *= -1;
+            }
+            if (positions[yIndex] < rectangle_top) {
+                positions[yIndex] = rectangle_top;
+                vectors[yIndex] *= -1;
+            } else if (positions[yIndex] >= rectangle_bottom) {
+                positions[yIndex] = rectangle_bottom - 1;
+                vectors[yIndex] *= -1;
+            }
+        }
+    };
+
+    function Particles_force(positions, vectors, count, x, y) {
+        for (let yIndex = count * 2 - 1, xIndex = yIndex - 1; xIndex > 0; xIndex -= 2, yIndex -= 2) {
+            const distanceX = positions[xIndex] - x;
+            const distanceY = positions[yIndex] - y;
+            const distanceSquared = distanceX * distanceX + distanceY * distanceY;
+            const forceX = (distanceX * 0.25) / distanceSquared;
+            const forceY = (distanceY * 0.25) / distanceSquared;
+            vectors[xIndex] += forceX;
+            vectors[yIndex] += forceY
+        }
+    };
+
+    const Particles_move = (positions, vectors, count, gravity, friction) => {
+        const length2 = count * 2;
+        for (let index = 0; index < length2; index += 2) {
+
+            const x = index;
+            const y = x + 1;
+
+            positions[x] += vectors[x];
+            positions[y] += vectors[y];
+            vectors[x] *= friction;
+            vectors[y] = vectors[y] * friction + gravity;
+        }
+    };
+
+    function consume() {
         circleColor = 0x000000;
-        const length2 = length * 2;
+        const length2 = PARTICLE_COUNT[0] * 2;
         for (let index2 = 0; index2 < length2; index2 += 2) {
-            const distanceX = circleX - positions[index2];
-            const distanceY = circleY - positions[index2 + 1];
+            const distanceX = circleX - PARTICLE_POSITIONS[index2];
+            const distanceY = circleY - PARTICLE_POSITIONS[index2 + 1];
             const distanceSquared = distanceX * distanceX + distanceY * distanceY;
             if (distanceSquared < circleRadiusSquared) {
                 //console.log(circleRadiusSquared);
                 const index1 = index2 * 0.5;
-                circleColor = colors[index1];
-                circleRadiusSquared += 1 / PureMath.Pi;
-                Particle.remove(particlePool, index1);
+                circleColor = PARTICLE_COLORS[index1];
+                circleRadiusSquared += 1 / PureMath_Pi;
+                Particles_remove(PARTICLE_POSITIONS, PARTICLE_VECTORS, PARTICLE_COLORS, PARTICLE_COUNT, index1);
             }
-        }
-    }
-
-    function render(positions, colors, length) {
-        for (let index1 = 0, index2 = 0; index1 < length; index1++, index2 += 2) {
-            Raster.fillAxisAlignedRectangle(DISPLAY_PIXELS, DISPLAY_WIDTH, PureMath.floor(positions[index2]), PureMath.floor(positions[index2 + 1]), 1, 1, colors[index1]);
         }
     }
 
@@ -73,11 +129,11 @@ const SimpleModel = (() => {
 
     function randomRangeU32(seed, index, lowValue, highValue) {
         const range = (highValue - lowValue + 1) >>> 0;
-        return lowValue + ((randomU32(seed, index) * range) * PureMath.inverseU32 | 0);
+        return lowValue + ((randomU32(seed, index) * range) * PureMath_inverseU32 | 0);
     }
 
     function randomRangeF32(seed, index, lowValue, highValue) {
-        return lowValue + randomU32(seed, index) * PureMath.inverseU32 * (highValue - lowValue);
+        return lowValue + randomU32(seed, index) * PureMath_inverseU32 * (highValue - lowValue);
     }
 
     function randomColor(seed, index, lowBlue, highBlue, lowGreen, highGreen, lowRed, highRed) {
@@ -100,16 +156,15 @@ const SimpleModel = (() => {
 
         initialize(seed) {
             randomSeed = seed;
-            const cursor = Buffer.createCursor(buffer, 0);
-            particlePool = Particle.createPool(cursor, 4000);
-            for (var i = 0; i < 4000; i++) {
+            for (var i = 0; i < PARTICLE_LIMIT; i++) {
                 const px = randomRangeU32(randomSeed, randomIndex++, 0, DISPLAY_WIDTH);
                 const py = randomRangeU32(randomSeed, randomIndex++, 0, DISPLAY_HEIGHT);
                 const vx = randomRangeF32(randomSeed, randomIndex++, 0, 1) - 0.5;
                 const vy = randomRangeF32(randomSeed, randomIndex++, 0, 1) - 0.5;
                 const color = randomColor(randomSeed, randomIndex++, 128, 192, 128, 192, 128, 192);
-                Particle.add(particlePool, px, py, vx, vy, color);
+                Particles_add(PARTICLE_POSITIONS, PARTICLE_VECTORS, PARTICLE_COLORS, PARTICLE_COUNT, PARTICLE_LIMIT, px, py, vx, vy, color);
             }
+            console.log("particle count: " + PARTICLE_COUNT[0]);
         },
 
         render() {
@@ -119,17 +174,20 @@ const SimpleModel = (() => {
                 //console.log("diff: " + (circleRadius - Math.sqrt(circleRadiusSquared)));
                 Raster.fillCircle(DISPLAY_PIXELS, DISPLAY_WIDTH, circleX, circleY, circleRadius, circleColor);
             }
-            Raster.fillTransparentAxisAlignedRectangle(DISPLAY_PIXELS, DISPLAY_WIDTH, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, (randomColor(randomSeed, randomIndex++) >> 8) & 0x00ffffff);
-            render(particlePool.positions, particlePool.colors, particlePool.count[0]);
+            Raster.fillTransparentAxisAlignedRectangle(DISPLAY_PIXELS, DISPLAY_WIDTH, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT, BACKGROUND_COLOR);
+
+            for (let index1 = 0, index2 = 0; index1 < PARTICLE_COUNT[0]; index1++, index2 += 2) {
+                Raster.fillAxisAlignedRectangle(DISPLAY_PIXELS, DISPLAY_WIDTH, PureMath.floor(PARTICLE_POSITIONS[index2]), PureMath.floor(PARTICLE_POSITIONS[index2 + 1]), 1, 1, PARTICLE_COLORS[index1]);
+            }
 
             return true;
         },
 
         update(platformTimeStamp) {
-            Particle.force(particlePool, mouse.x, mouse.y);
-            Particle.move(particlePool, gravity, friction);
-            Particle.collideInnerRectangle(particlePool, 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-            consume(particlePool.positions, particlePool.colors, particlePool.count[0]);
+            Particles_force(PARTICLE_POSITIONS, PARTICLE_VECTORS, PARTICLE_COUNT[0], mouse.x, mouse.y);
+            Particles_move(PARTICLE_POSITIONS, PARTICLE_VECTORS, PARTICLE_COUNT[0], gravity, friction);
+            Particles_collideInnerRectangle(PARTICLE_POSITIONS, PARTICLE_VECTORS, PARTICLE_COUNT[0], 0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+            consume();
             return true;
         },
 
