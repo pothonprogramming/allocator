@@ -17,24 +17,16 @@ const SimpleModel = (() => {
     const DISPLAY_PIXELS = new Uint32Array(DISPLAY_PIXEL_COUNT);
 
     // Buffers
-    const GLYPH_BUFFER = new ArrayBuffer(1000);
     const STATE_BUFFER = new ArrayBuffer(20004);
 
     // Cursors used to build views
-    const GLYPH_CURSOR = View_createCursor(GLYPH_BUFFER, 0);
-    const STATE_CURSOR = View_createCursor(STATE_BUFFER, 0); // Cursor used to build views
-
-    // Views and related data
-    const GLYPHS = [
-        View_createU8(GLYPH_CURSOR, 4 * 6), // a
-        View_createU8(GLYPH_CURSOR, 4 * 6), // b
-    ];
+    const STATE_CURSOR = Layout_createCursor(0); // Cursor used to build views
 
     const PARTICLE_LIMIT = 1000;
-    const PARTICLE_COUNT = View_createU32(STATE_CURSOR, 1);
-    const PARTICLE_POSITIONS = View_createF32(STATE_CURSOR, 2 * PARTICLE_LIMIT);
-    const PARTICLE_VECTORS = View_createF32(STATE_CURSOR, 2 * PARTICLE_LIMIT);
-    const PARTICLE_COLORS = View_createU32(STATE_CURSOR, PARTICLE_LIMIT);
+    const PARTICLE_COUNT = Layout_createU32View(STATE_BUFFER, STATE_CURSOR, 1);
+    const PARTICLE_POSITIONS = Layout_createF32View(STATE_BUFFER, STATE_CURSOR, 2 * PARTICLE_LIMIT);
+    const PARTICLE_VECTORS = Layout_createF32View(STATE_BUFFER, STATE_CURSOR, 2 * PARTICLE_LIMIT);
+    const PARTICLE_COLORS = Layout_createU32View(STATE_BUFFER, STATE_CURSOR, PARTICLE_LIMIT);
 
     const mouse = Mouse.create(0, 0);
 
